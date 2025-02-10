@@ -1,0 +1,19 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="container-fluid">
+        <h1>Upravit Fail</h1>
+
+        <div class="pt-5">
+            {{ form_start(form) }}
+            {{ form_row(form.createdAt) }}
+            <div class="d-flex">
+                {{ form_row(form.submit) }}
+                <a class="btn btn-warning mb-3 ms-1" href="{{ path('upsert_improve', {'improve_id': improve.id}) }}">Späť</a>
+            </div>
+            {{ form_end(form) }}
+        </div>
+
+    </div>
+{% endblock %}
+

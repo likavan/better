@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="container-fluid">
+        <h1>Čo chcem zlepšiť</h1>
+
+        <div class="pt-5">
+            {{ form_start(form) }}
+            {{ form_row(form.title) }}
+            {{ form_row(form.createdAt) }}
+            <div class="d-flex">
+                {{ form_row(form.submit) }}
+                <a class="btn btn-warning mb-3 ms-1" href="{{ path('index') }}">Späť</a>
+            </div>
+            {{ form_end(form) }}
+        </div>
+        <table class="pt-5 table table-bordered">
+            {% for fail in improve.fails %}
+                <tr class="d-flex align-items-center">
+                    <td class="bg-transparent w-100 border-0">{{ fail.createdAt | date('d.M.Y') }}</td>
+                    <td class="bg-transparent d-flex justify-content-end border-0">
+                        <a href="{{ path('edit_fail', {'fail_id' : fail.id}) }}" class="btn btn-sm btn-outline-primary ms-2">Edit</a>
+                        <a href="{{ path('remove_fail', {'improve_id': fail.improve.id, 'fail_id' : fail.id}) }}" class="btn btn-sm btn-outline-danger ms-2">Zmazať</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+
+    </div>
+{% endblock %}
+
