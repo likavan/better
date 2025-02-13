@@ -8,6 +8,10 @@ use App\Form\FailType;
 use App\Form\ImproveType;
 use App\Repository\FailRepository;
 use App\Repository\ImproveRepository;
+use App\Services\ImproveService;
+use DateInterval;
+use DatePeriod;
+use DateTime;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,7 +24,8 @@ final class AppController extends AbstractController
 {
     #[Route('/', name: 'index')]
     public function index(
-        ImproveRepository $improveRepository
+        ImproveRepository $improveRepository,
+        ImproveService    $improveService
     ): Response
     {
         $improves = $improveRepository->findAll();
@@ -28,8 +33,9 @@ final class AppController extends AbstractController
         $totalPercentageImprove = 0;
 
         foreach ($improves as $improve) {
-            $totalImproveDays = $this->totalImproveDays($improve->getCreatedAt());
-            $totalBadDays = $this->calculateBadDaysCount($improve->getFails());
+            $improveDays = $improveService->totalImproveDays($improve->getCreatedAt());
+            $totalImproveDays = count($improveDays);
+            $totalBadDays = $improveService->calculateBadDaysCount($improve->getFails());
             $percentageImproveDays = $totalImproveDays ? round((100 - ($totalBadDays / $totalImproveDays) * 100), 2) : 0;
             $totalPercentageImprove += $percentageImproveDays;
 
@@ -40,8 +46,8 @@ final class AppController extends AbstractController
             $actualImprove['total_bad_days'] = $totalBadDays;
             $actualImprove['total_improve_days'] = $totalImproveDays;
             $actualImprove['percentage_improve_days'] = $percentageImproveDays;
-            $actualImprove['max_days_in_one_line'] = $this->maxDaysInOneLine($improve->getCreatedAt(), $improve->getFails());
-            $actualImprove['actual_days_in_one_line'] = $this->actualDaysInOneLine($improve->getCreatedAt(), $improve->getFails());
+            $actualImprove['max_days_in_one_line'] = $improveService->maxDaysInOneLine($improveDays, $improve->getFails());
+            $actualImprove['actual_days_in_one_line'] = $improveService->actualDaysInOneLine($improveDays, $improve->getFails());
 
 
             $resultImproves[] = $actualImprove;
@@ -157,57 +163,7 @@ final class AppController extends AbstractController
 
     }
 
-    private function totalImproveDays(DateTimeImmutable $improveStartDate): int
-    {
-        $different = time() - $improveStartDate->getTimestamp();
-        return floor($different / (60 * 60 * 24));
-    }
 
-    private function calculateBadDaysCount(Collection $getFails): int
-    {
-        $result = [];
-        foreach ($getFails as $fail) {
-            $failDate = $fail->getCreatedAt()->format('Y-m-d');
-            $result[$failDate] = [$failDate];
-        }
-        return count($result);
-    }
 
-    private function maxDaysInOneLine( DateTimeImmutable $improveStartDate, Collection $fails): int
-    {
-        $result = 0;
-        $startDate = $improveStartDate->modify('-1 day');
-        foreach ($fails as $fail)
-        {
-            $failDate = $fail->getCreatedAt();
-            $days = ($this->daysFromTimestamp($failDate->getTimestamp())-1) - $this->daysFromTimestamp($startDate->getTimestamp());
-            if ($days > $result) {
-                $result = $days;
-            }
-            $startDate = $failDate;
-        }
 
-        $days = ($this->daysFromTimestamp(time()) -1) - $this->daysFromTimestamp($startDate->getTimestamp());
-        if ($days > $result) {
-            $result = $days;
-        }
-        return $result;
-    }
-
-    private function actualDaysInOneLine(DateTimeImmutable $improveStartDate,Collection $fails): int
-    {
-        $result = 0;
-        $startDate = $fails->count() > 0 ? $fails->last()->getCreatedAt() : $improveStartDate->modify('-1 day');
-
-        $days = ($this->daysFromTimestamp(time()) - 1) - $this->daysFromTimestamp($startDate->getTimestamp());
-        if ($days > $result) {
-            $result = $days;
-        }
-        return $result ;
-    }
-
-    private function daysFromTimestamp(int $timestamp): int
-    {
-        return floor($timestamp / (60 * 60 * 24));
-    }
 }
