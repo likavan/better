@@ -4,16 +4,14 @@ namespace App\Controller;
 
 use App\Entity\Fail;
 use App\Entity\Improve;
+use App\Entity\ImproveGroup;
 use App\Form\FailType;
+use App\Form\ImproveGroupType;
 use App\Form\ImproveType;
 use App\Repository\FailRepository;
+use App\Repository\ImproveGroupRepository;
 use App\Repository\ImproveRepository;
 use App\Services\ImproveService;
-use DateInterval;
-use DatePeriod;
-use DateTime;
-use DateTimeImmutable;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,39 +22,47 @@ final class AppController extends AbstractController
 {
     #[Route('/', name: 'index')]
     public function index(
-        ImproveRepository $improveRepository,
-        ImproveService    $improveService
+        ImproveGroupRepository $improveGroupRepository,
+        ImproveService         $improveService
     ): Response
     {
-        $improves = $improveRepository->findAll();
-        $resultImproves = [];
-        $totalPercentageImprove = 0;
-
-        foreach ($improves as $improve) {
-            $improveDays = $improveService->totalImproveDays($improve->getCreatedAt());
-            $totalImproveDays = count($improveDays);
-            $totalBadDays = $improveService->calculateBadDaysCount($improve->getFails());
-            $percentageImproveDays = $totalImproveDays ? round((100 - ($totalBadDays / $totalImproveDays) * 100), 2) : 0;
-            $totalPercentageImprove += $percentageImproveDays;
-
-            $actualImprove['id'] = $improve->getId();
-            $actualImprove['title'] = $improve->getTitle();
-            $actualImprove['createdAt'] = $improve->getCreatedAt();
-            $actualImprove['fails'] = $improve->getFails();
-            $actualImprove['total_bad_days'] = $totalBadDays;
-            $actualImprove['total_improve_days'] = $totalImproveDays;
-            $actualImprove['percentage_improve_days'] = $percentageImproveDays;
-            $actualImprove['max_days_in_one_line'] = $improveService->maxDaysInOneLine($improveDays, $improve->getFails());
-            $actualImprove['actual_days_in_one_line'] = $improveService->actualDaysInOneLine($improveDays, $improve->getFails());
+        $improveGroups = $improveGroupRepository->findAll();
+        $resultImproveGroups = [];
 
 
-            $resultImproves[] = $actualImprove;
+        foreach ($improveGroups as $improveGroup) {
+            $totalPercentageImprove = 0;
+            $resultImproveGroups[$improveGroup->getId()]['title'] = $improveGroup->getTitle();
+            $resultImproveGroups[$improveGroup->getId()]['id'] = $improveGroup->getId();
+            $resultImproveGroups[$improveGroup->getId()]['improves'] = [];
+            $improves = $improveGroup->getImproves();
+            foreach ($improves as $improve) {
+                $improveDays = $improveService->totalImproveDays($improve);
+                $totalImproveDays = count($improveDays);
+                $totalBadDays = $improveService->calculateBadDaysCount($improve->getFails());
+                $percentageImproveDays = $totalImproveDays ? round((100 - ($totalBadDays / $totalImproveDays) * 100), 2) : 0;
+                $totalPercentageImprove += $percentageImproveDays;
+
+                $actualImprove['id'] = $improve->getId();
+                $actualImprove['title'] = $improve->getTitle();
+                $actualImprove['createdAt'] = $improve->getCreatedAt();
+                $actualImprove['fails'] = $improve->getFails();
+                $actualImprove['total_bad_days'] = $totalBadDays;
+                $actualImprove['total_improve_days'] = $totalImproveDays;
+                $actualImprove['percentage_improve_days'] = $percentageImproveDays;
+                $actualImprove['max_days_in_one_line'] = $improveService->maxDaysInOneLine($improveDays, $improve->getFails());
+                $actualImprove['actual_days_in_one_line'] = $improveService->actualDaysInOneLine($improveDays, $improve->getFails());
+
+
+                $resultImproveGroups[$improveGroup->getId()]['improves'][] = $actualImprove;
+            }
+
+            $resultImproveGroups[$improveGroup->getId()]['totalPercentageImprove'] = count($improves) > 0 ? round($totalPercentageImprove / count($improves), 2) : 0;
         }
 
 
         return $this->render('app/index.html.twig', [
-            'improves' => $resultImproves,
-            'totalPercentageImprove' => round($totalPercentageImprove / count($improves), 2)
+            'improveGroups' => $resultImproveGroups,
         ]);
     }
 
@@ -88,6 +94,36 @@ final class AppController extends AbstractController
         return $this->render('app/upsert_improve.html.twig', [
             'form' => $form,
             'improve' => $improve
+        ]);
+    }
+
+    #[Route('/upsert-improve-group/{improveGroupId}', name: 'upsert_improve_group', defaults: ['improveGroupId' => null])]
+    public function upsertImproveGroup(
+        Request                $request,
+        EntityManagerInterface $entityManager,
+        ImproveGroupRepository $improveGroupRepository,
+        ?int                   $improveGroupId
+    ): Response
+    {
+        if ($improveGroupId) {
+            $improveGroup = $improveGroupRepository->find($improveGroupId);
+        } else {
+            $improveGroup = new ImproveGroup();
+        }
+
+        $form = $this->createForm(ImproveGroupType::class, $improveGroup);
+
+        $form->handleRequest($request);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $improveGroup = $form->getData();
+
+            $entityManager->persist($improveGroup);
+            $entityManager->flush();
+            return $this->redirectToRoute('index');
+        }
+
+        return $this->render('app/upsert_improve_group.html.twig', [
+            'form' => $form
         ]);
     }
 
@@ -162,8 +198,6 @@ final class AppController extends AbstractController
         return $this->redirectToRoute('upsert_improve', ['improve_id' => $improve_id]);
 
     }
-
-
 
 
 }

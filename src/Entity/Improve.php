@@ -28,6 +28,12 @@ class Improve implements  TimestampableInterface
     #[ORM\OrderBy(['createdAt' => 'ASC'])]
     private Collection $fails;
 
+    #[ORM\Column]
+    private ?bool $onlyWorkingDays = null;
+
+    #[ORM\ManyToOne(inversedBy: 'improves')]
+    private ?ImproveGroup $improveGroup = null;
+
     public function __construct()
     {
         $this->fails = new ArrayCollection();
@@ -76,6 +82,30 @@ class Improve implements  TimestampableInterface
                 $fail->setImprove(null);
             }
         }
+
+        return $this;
+    }
+
+    public function isOnlyWorkingDays(): ?bool
+    {
+        return $this->onlyWorkingDays;
+    }
+
+    public function setOnlyWorkingDays(bool $onlyWorkingDays): static
+    {
+        $this->onlyWorkingDays = $onlyWorkingDays;
+
+        return $this;
+    }
+
+    public function getImproveGroup(): ?ImproveGroup
+    {
+        return $this->improveGroup;
+    }
+
+    public function setImproveGroup(?ImproveGroup $improveGroup): static
+    {
+        $this->improveGroup = $improveGroup;
 
         return $this;
     }

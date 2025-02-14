@@ -1,0 +1,19 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="container-fluid">
+        <h1>Čo chcem zlepšiť</h1>
+
+        <div class="pt-5">
+            {{ form_start(form) }}
+            {{ form_row(form.title) }}
+            <div class="d-flex">
+                {{ form_row(form.submit) }}
+                <a class="btn btn-warning mb-3 ms-1" href="{{ path('index') }}">Späť</a>
+            </div>
+            {{ form_end(form) }}
+        </div>
+
+    </div>
+{% endblock %}
+

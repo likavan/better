@@ -7,7 +7,9 @@
         <div class="pt-5">
             {{ form_start(form) }}
             {{ form_row(form.title) }}
+            {{ form_row(form.improveGroup) }}
             {{ form_row(form.createdAt) }}
+            {{ form_row(form.onlyWorkingDays) }}
             <div class="d-flex">
                 {{ form_row(form.submit) }}
                 <a class="btn btn-warning mb-3 ms-1" href="{{ path('index') }}">Späť</a>

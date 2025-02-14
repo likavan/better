@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Entity\Improve;
 use DateInterval;
 use DatePeriod;
 use DateTime;
@@ -13,17 +14,17 @@ use Doctrine\Common\Collections\Collection;
 class ImproveService
 {
 
-    public function totalImproveDays(DateTimeImmutable $improveStartDate): array
+    public function totalImproveDays(Improve $improve): array
     {
-        $workingDays = [1, 2, 3, 4, 5];
-        $from = new DateTime($improveStartDate->format('Y-m-d'));
+        $improveDays = $improve->isOnlyWorkingDays() ?  [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6, 7];
+        $from = new DateTime($improve->getCreatedAt()->format('Y-m-d'));
         $to = new DateTime(date('Y-m-d', time()));
         $to->modify('+1 days');
         $interval = new DateInterval('P1D');
         $periods = new DatePeriod($from, $interval, $to);
         $days = [];
         foreach ($periods as $period) {
-            if (!in_array($period->format('N'), $workingDays)) continue;
+            if (!in_array($period->format('N'), $improveDays)) continue;
             $days[] = $period->format('Y-m-d');
         }
         return $days;
